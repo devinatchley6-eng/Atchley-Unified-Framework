@@ -4,16 +4,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple, Union, List
 
 import numpy as np
+from numpy import ndarray
 
 
 # Canonical coordinate order (LOCKED)
-COORDS_7 = ["kappa", "energy", "entropy", "rigidity", "sharpness", "coherence", "thermal"]
+COORDS_7: List[str] = ["kappa", "energy", "entropy", "rigidity", "sharpness", "coherence", "thermal"]
 
 # Canonical operator order (LOCKED)
-OPS_10 = [
+OPS_10: List[str] = [
     "O_clamp",
     "O_contract",
     "O_freeze",
@@ -37,27 +38,27 @@ class Mode(str, Enum):
     SCOPE_DROP = "SCOPE_DROP"
 
 
-def sigmoid(x: np.ndarray) -> np.ndarray:
+def sigmoid(x: ndarray) -> ndarray:
     """Stable sigmoid function."""
-    x = np.clip(x, -50.0, 50.0)
-    return 1.0 / (1.0 + np.exp(-x))
+    x_clipped: ndarray = np.clip(x, -50.0, 50.0)
+    return 1.0 / (1.0 + np.exp(-x_clipped))
 
 
 @dataclass(frozen=True)
 class Thresholds:
     """Per-coordinate thresholds theta and softness tau."""
 
-    theta: Union[np.ndarray, list]
-    tau: Union[np.ndarray, list]
+    theta: Union[ndarray, List[float]]
+    tau: Union[ndarray, List[float]]
 
     def __post_init__(self) -> None:
-        theta_arr = np.asarray(self.theta, dtype=np.float64).reshape(7)
-        tau_arr = np.asarray(self.tau, dtype=np.float64).reshape(7)
+        theta_arr: ndarray = np.asarray(self.theta, dtype=np.float64).reshape(7)
+        tau_arr: ndarray = np.asarray(self.tau, dtype=np.float64).reshape(7)
 
         object.__setattr__(self, "theta", theta_arr)
         object.__setattr__(self, "tau", tau_arr)
 
-        if np.any(self.tau <= 0):
+        if np.any(tau_arr <= 0):
             raise ValueError("tau must be > 0 for all coordinates")
 
 
@@ -101,18 +102,18 @@ class SelectionState:
 class GeometryOutput:
     """Complete output from geometry engine."""
 
-    s: np.ndarray
-    z: np.ndarray
-    a: np.ndarray
+    s: ndarray
+    z: ndarray
+    a: ndarray
     selected_operator: str
     selection_reason: str
     risk_layer: float
     mode: Mode
 
 
-def default_M() -> np.ndarray:
+def default_M() -> ndarray:
     """Default operator sensitivity matrix M (10×7)."""
-    M = np.zeros((10, 7), dtype=np.float64)
+    M: ndarray = np.zeros((10, 7), dtype=np.float64)
 
     # Indices for readability
     kappa, energy, entropy, rigidity, sharpness, coherence, thermal = range(7)
@@ -156,7 +157,7 @@ def default_M() -> np.ndarray:
     M[9, coherence] = 1.0
 
     # Column-stochastic normalization
-    col_sums = M.sum(axis=0)
+    col_sums: ndarray = M.sum(axis=0)
     for j in range(M.shape[1]):
         if col_sums[j] > 0:
             M[:, j] /= col_sums[j]
@@ -171,12 +172,12 @@ class GeometryEngine:
         self,
         thresholds: Thresholds,
         intervention_thresholds: InterventionThresholds,
-        M: Optional[np.ndarray] = None,
+        M: Optional[ndarray] = None,
         hysteresis: Optional[HysteresisConfig] = None,
     ) -> None:
         self.thresholds = thresholds
         self.intervention_thresholds = intervention_thresholds
-        self.M = default_M() if M is None else np.asarray(M, dtype=np.float64)
+        self.M: ndarray = default_M() if M is None else np.asarray(M, dtype=np.float64)
 
         if self.M.shape != (10, 7):
             raise ValueError("M must be shape (10,7)")
@@ -186,17 +187,17 @@ class GeometryEngine:
         self.hysteresis = hysteresis or HysteresisConfig()
         self.state = SelectionState()
 
-    def compute_z(self, s: np.ndarray) -> np.ndarray:
+    def compute_z(self, s: ndarray) -> ndarray:
         """Compute exceedance vector z(t) = sigmoid((s - theta)/tau)."""
-        s = np.asarray(s, dtype=np.float64).reshape(7)
-        return sigmoid((s - self.thresholds.theta) / self.thresholds.tau)
+        s_reshaped: ndarray = np.asarray(s, dtype=np.float64).reshape(7)
+        return sigmoid((s_reshaped - self.thresholds.theta) / self.thresholds.tau)
 
-    def compute_a(self, z: np.ndarray) -> np.ndarray:
+    def compute_a(self, z: ndarray) -> ndarray:
         """Compute activation scores a(t) = M @ z(t)."""
-        z = np.asarray(z, dtype=np.float64).reshape(7)
-        return self.M @ z
+        z_reshaped: ndarray = np.asarray(z, dtype=np.float64).reshape(7)
+        return self.M @ z_reshaped
 
-    def _risk_from_z(self, z: np.ndarray) -> float:
+    def _risk_from_z(self, z: ndarray) -> float:
         """Placeholder for full layer risk calculation."""
         return float(np.clip(np.max(z), 0.0, 1.0))
 
@@ -210,20 +211,20 @@ class GeometryEngine:
             return Mode.THROTTLE
         return Mode.DEEPFREEZE
 
-    def select_operator(self, a: np.ndarray) -> Tuple[str, str]:
+    def select_operator(self, a: ndarray) -> Tuple[str, str]:
         """Select operator with hysteresis guard."""
-        a = np.asarray(a, dtype=np.float64).reshape(10)
-        cand_idx = int(np.argmax(a))
-        cand = OPS_10[cand_idx]
-        cand_val = float(a[cand_idx])
+        a_reshaped: ndarray = np.asarray(a, dtype=np.float64).reshape(10)
+        cand_idx: int = int(np.argmax(a_reshaped))
+        cand: str = OPS_10[cand_idx]
+        cand_val: float = float(a_reshaped[cand_idx])
 
-        st = self.state
-        h = self.hysteresis
+        st: SelectionState = self.state
+        h: HysteresisConfig = self.hysteresis
 
         # De-escalation check for current active operator
         if st.active_operator is not None:
-            active_idx = OPS_10.index(st.active_operator)
-            active_val = float(a[active_idx])
+            active_idx: int = OPS_10.index(st.active_operator)
+            active_val: float = float(a_reshaped[active_idx])
 
             if active_val < h.theta_down:
                 st.below_count += 1
@@ -231,7 +232,7 @@ class GeometryEngine:
                 st.below_count = 0
 
             if st.below_count >= h.n_down:
-                prev = st.active_operator
+                prev: str = st.active_operator
                 st.active_operator = None
                 st.above_count = 0
                 st.below_count = 0
@@ -252,19 +253,21 @@ class GeometryEngine:
 
         return cand, f"arming: {cand} ({st.above_count}/{h.n_up})"
 
-    def step(self, s: np.ndarray) -> GeometryOutput:
+    def step(self, s: ndarray) -> GeometryOutput:
         """Process one timestep: compute all quantities."""
-        s = np.asarray(s, dtype=np.float64).reshape(7)
+        s_reshaped: ndarray = np.asarray(s, dtype=np.float64).reshape(7)
 
-        z = self.compute_z(s)
-        a = self.compute_a(z)
+        z: ndarray = self.compute_z(s_reshaped)
+        a: ndarray = self.compute_a(z)
+        op: str
+        reason: str
         op, reason = self.select_operator(a)
 
-        risk = self._risk_from_z(z)
-        mode = self._mode_from_risk(risk)
+        risk: float = self._risk_from_z(z)
+        mode: Mode = self._mode_from_risk(risk)
 
         return GeometryOutput(
-            s=s,
+            s=s_reshaped,
             z=z,
             a=a,
             selected_operator=op,
