@@ -1,0 +1,27 @@
+Metadata-Version: 2.4
+Name: aum
+Version: 0.1.0
+Summary: Atchley Unified Framework (AUF) - Structural AI Safety
+Author: Devin Earl Atchley
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: numpy>=1.21.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: ruff>=0.1.0; extra == "dev"
+Requires-Dist: mypy>=1.0.0; extra == "dev"
+Provides-Extra: test
+Requires-Dist: pytest>=7.0.0; extra == "test"
+Requires-Dist: pytest-cov>=4.0.0; extra == "test"
+Dynamic: license-file
+
+# Atchley Unified Framework (AUF) - Task 1
+
+Core geometry routing kernel for AUF/AUM.
+
+## Quick Start
+\`\`\`bash
+pip install -e ".[dev]"
+pytest tests/ -v
+\`\`\`

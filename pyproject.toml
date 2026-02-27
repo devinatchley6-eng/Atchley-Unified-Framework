@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aum"
+version = "0.1.0"
+description = "Atchley Unified Framework (AUF) - Structural AI Safety"
+authors = [{name = "Devin Earl Atchley"}]
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["numpy>=1.21.0"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0.0", "ruff>=0.1.0", "mypy>=1.0.0"]
+test = ["pytest>=7.0.0", "pytest-cov>=4.0.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["aum*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+addopts = "-v"
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.mypy]
+python_version = "3.9"
+strict = true
+ignore_missing_imports = true
