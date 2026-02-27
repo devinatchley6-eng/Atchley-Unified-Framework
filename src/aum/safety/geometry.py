@@ -1,6 +1,6 @@
-"""Geometry kernel for AUF - 7D state routing and operator selection."""
-
 from __future__ import annotations
+
+"""Geometry kernel for AUF - 7D state routing and operator selection."""
 
 from dataclasses import dataclass
 from enum import Enum
